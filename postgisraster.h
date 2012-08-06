@@ -41,6 +41,10 @@
 #define DEFAULT_USER			"postgres"
 #define DEFAULT_PASSWORD		"postgres"
 
+#define DEFAULT_BLOCK_X_SIZE	256
+#define DEFAULT_BLOCK_Y_SIZE	256
+
+
 #define POSTGIS_RASTER_VERSION         (GUInt16)0
 #define RASTER_HEADER_SIZE              61
 #define RASTER_BAND_HEADER_FIXED_SIZE   1
