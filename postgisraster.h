@@ -164,8 +164,7 @@ public:
 
     PostGISRasterRasterBand(PostGISRasterDataset *poDS, int nBand, GDALDataType hDataType,
             GBool bHasNoDataValue, double dfNodata, GBool bSignedByte, int nBitDepth, int nFactor,
-            int nTiles, GBool bIsOffline = false, char * pszSchema = NULL, char * pszTable = NULL,
-            char * pszColumn = NULL);
+            int nBlockXSize, int nBlockYSize, GBool bIsOffline = false);
 
     virtual ~PostGISRasterRasterBand();
 

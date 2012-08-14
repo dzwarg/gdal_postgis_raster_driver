@@ -370,6 +370,7 @@ GBool PostGISRasterDataset::SetRasterProperties
 	int nPreviousTileWidth = 0;
 	int nPreviousTileHeight = 0;
 	double xmin, xmax, ymin, ymax;
+	int nBlockXSize = 0, nBlockYSize = 0;
 
     /* Incorporated variables from old SetRasterBand method */
     GBool bSignedByte = false;
@@ -523,7 +524,7 @@ GBool PostGISRasterDataset::SetRasterProperties
 	
 			// Rotated rasters are not allowed, so far
 			// TODO: allow them
-			if (FLT_NEQ(tileSkewX, 0.0) || FLT_NEQ(tileSkewY, 0.0)) {
+			if (!CPLIsEqual(tileSkewX, 0.0) || !CPLIsEqual(tileSkewY, 0.0)) {
 				CPLError(CE_Failure, CPLE_AppDefined, "GDAL PostGIS Raster driver can not work with "
 				"rotated rasters yet.");
 
@@ -605,12 +606,21 @@ GBool PostGISRasterDataset::SetRasterProperties
 		nRasterYSize = (int) fabs(rint((ymax - ymin) / adfGeoTransform[GEOTRSFRM_NS_RES]));
     	
 
-		if (nRasterXSize == 0 || nRasterYSize == 0) {
+		if (nRasterXSize <= 0 || nRasterYSize <= 0) {
         	CPLError(CE_Failure, CPLE_AppDefined, 
 				"Computed PostGIS Raster dimension is invalid. You've probably specified "
 				"unappropriate resolution.");
         	return CE_Failure;
     	}
+
+		/**
+		 * Regular blocking: get the last values for tile width and height as block
+		 * size
+		 **/
+		if (bRegularBlocking) {
+			nBlockXSize = nTileWidth;
+			nBlockYSize = nTileHeight;
+		}
 		
 		PQclear(poResult);
 
@@ -648,7 +658,10 @@ GBool PostGISRasterDataset::SetRasterProperties
             	pszColumn, pszColumn, pszSchema, pszTable, pszWhere);
     	}
 
-    	poResult = PQexec(poConn, osCommand.c_str());
+		CPLDebug("PostGIS_Raster", "PostGISRasterDataset::SetRasterProperties(): "
+			"Query: %s", osCommand.c_str());
+    	
+		poResult = PQexec(poConn, osCommand.c_str());
     	nTuples = PQntuples(poResult);
 
     	/* Error getting info from database */
@@ -750,7 +763,8 @@ GBool PostGISRasterDataset::SetRasterProperties
 
         	/* Create raster band object */
         	SetBand(iBand + 1, new PostGISRasterRasterBand(this, iBand + 1, hDataType,
-                bHasNoDataValue, dfNodata, bSignedByte, nBitDepth, 0, nTiles, bIsOffline));
+                bHasNoDataValue, dfNodata, bSignedByte, nBitDepth, 0, nBlockXSize, 
+				nBlockYSize, bIsOffline));
 
         	CPLFree(pszDataType);
     	}
