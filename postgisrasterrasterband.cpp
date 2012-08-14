@@ -606,14 +606,31 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 			"open info = %s", szMemOpenInfo);
 
 		oOpenInfo = new GDALOpenInfo(szMemOpenInfo, GA_ReadOnly, NULL);
-	
+		if (!oOpenInfo) {
+			CPLError(CE_Warning, CPLE_AppDefined, "Could not allocate memory for "
+				"MEMDataset, skipping. The result image may contain gaps");
+			continue;
+		}
+		
 		memDatasets[iTuplesIndex] = MEMDataset::Open(oOpenInfo);
+		if (!memDatasets[iTuplesIndex]) {
+			delete oOpenInfo;
+			CPLError(CE_Warning, CPLE_AppDefined, "Could not create MEMDataset, "
+				"skipping. The result image may contain gaps");
+			continue;
+		}
+		
 		GDALSetDescription(memDatasets[iTuplesIndex], szMemOpenInfo);
 
 		/** 
 		 * Get MEM raster band, to add it as simple source.
 		 **/
-		memRasterBand = (GDALRasterBandH)memDatasets[iTuplesIndex]->GetRasterBand(1); 
+		memRasterBand = (GDALRasterBandH)memDatasets[iTuplesIndex]->GetRasterBand(1);
+		if (!memRasterBand) {
+			CPLError(CE_Warning, CPLE_AppDefined, "Could not get MEMRasterBand , "
+				"skipping. The result image may contain gaps");
+			continue;
+		} 
 		((MEMRasterBand *)memRasterBand)->SetNoDataValue(dfTileBandNoDataValue);
 
 		CPLDebug("PostGIS_Raster", "PostGISRasterRasterBand::IRasterIO: Adding "
