@@ -259,6 +259,7 @@ GDALDataType PostGISRasterRasterBand::TranslateDataType(const char * pszDataType
 }
 
 
+
 /**
  * Read/write a region of image data from multiple bands.
  *
@@ -354,6 +355,10 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 	int nBufDataSize;
 	int nTileWidth;
 	int nTileHeight;
+	double dfTileScaleX;
+	double dfTileScaleY;
+	double dfTileUpperLeftX;
+	double dfTileUpperLeftY;
 	char * pszDataType = NULL; 
 	char * pszDataTypeName = NULL;
 	GDALDataType eTileDataType;
@@ -371,6 +376,8 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 	char szTileHeight[64];
 	CPLErr err;
     PostGISRasterDataset * poPostGISRasterDS = (PostGISRasterDataset*)poDS;
+	int nSrcXOff, nSrcYOff, nDstXOff, nDstYOff;
+	int nDstXSize, nDstYSize;
 
 	/**
      * TODO: Write support not implemented yet
@@ -446,29 +453,32 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 
 	if (poPostGISRasterDS->pszWhere == NULL) {
 		osCommand.Printf("SELECT st_band(%s, %d), st_width(%s), st_height(%s), st_bandpixeltype(%s, %d), "
-			"st_bandnodatavalue(%s, %d) "
+			"st_bandnodatavalue(%s, %d), st_scalex(%s), st_scaley(%s), st_upperleftx(%s), st_upperlefty(%s) "
 			"FROM %s.%s WHERE st_intersects(%s, st_polygonfromtext('POLYGON((%.17f %.17f, %.17f %.17f, "
 			"%.17f %.17f, %.17f %.17f, %.17f %.17f))', %d)) ORDER BY ST_UpperLeftY(%s) %s, "
 			"ST_UpperLeftX(%s) %s", poPostGISRasterDS->pszColumn, nBand, poPostGISRasterDS->pszColumn, 
 			poPostGISRasterDS->pszColumn, poPostGISRasterDS->pszColumn, nBand, poPostGISRasterDS->pszColumn, 
-			nBand, poPostGISRasterDS->pszSchema, poPostGISRasterDS->pszTable, poPostGISRasterDS->pszColumn, 
-			adfProjWin[0], adfProjWin[1], adfProjWin[2], adfProjWin[3], adfProjWin[4], adfProjWin[5], 
-			adfProjWin[6], adfProjWin[7], adfProjWin[0], adfProjWin[1], poPostGISRasterDS->nSrid, 
-			poPostGISRasterDS->pszColumn, orderByY, poPostGISRasterDS->pszColumn, orderByX);
-	}
-
-	else {
-		osCommand.Printf("SELECT st_band(%s, %d), st_width(%s), st_height(%s), st_bandpixeltype(%s, %d), "
-			"st_bandnodatavalue(%s, %d) "
-			"FROM %s.%s WHERE %s AND st_intersects(%s, st_polygonfromtext('POLYGON((%.17f %.17f, %.17f %.17f, "
-			"%.17f %.17f, %.17f %.17f, %.17f %.17f))', %d)) ORDER BY ST_UpperLeftY(%s) %s, "
-			"ST_UpperLeftX(%s) %s", poPostGISRasterDS->pszColumn, nBand, poPostGISRasterDS->pszColumn, 
-			poPostGISRasterDS->pszColumn, poPostGISRasterDS->pszColumn, nBand, poPostGISRasterDS->pszColumn, 
-			nBand, poPostGISRasterDS->pszSchema, poPostGISRasterDS->pszTable, poPostGISRasterDS->pszWhere, 
+			nBand, poPostGISRasterDS->pszColumn, poPostGISRasterDS->pszColumn, poPostGISRasterDS->pszColumn,
+			poPostGISRasterDS->pszColumn, poPostGISRasterDS->pszSchema, poPostGISRasterDS->pszTable, 
 			poPostGISRasterDS->pszColumn, adfProjWin[0], adfProjWin[1], adfProjWin[2], adfProjWin[3], 
 			adfProjWin[4], adfProjWin[5], adfProjWin[6], adfProjWin[7], adfProjWin[0], adfProjWin[1], 
 			poPostGISRasterDS->nSrid, poPostGISRasterDS->pszColumn, orderByY, poPostGISRasterDS->pszColumn, 
 			orderByX);
+	}
+
+	else {
+		osCommand.Printf("SELECT st_band(%s, %d), st_width(%s), st_height(%s), st_bandpixeltype(%s, %d), "
+			"st_bandnodatavalue(%s, %d), st_scalex(%s), st_scaley(%s), st_upperleftx(%s), st_upperlefty(%s) "
+			"FROM %s.%s WHERE %s AND st_intersects(%s, st_polygonfromtext('POLYGON((%.17f %.17f, %.17f %.17f, "
+			"%.17f %.17f, %.17f %.17f, %.17f %.17f))', %d)) ORDER BY ST_UpperLeftY(%s) %s, "
+			"ST_UpperLeftX(%s) %s", poPostGISRasterDS->pszColumn, nBand, poPostGISRasterDS->pszColumn, 
+			poPostGISRasterDS->pszColumn, poPostGISRasterDS->pszColumn, nBand, poPostGISRasterDS->pszColumn, 
+			nBand, poPostGISRasterDS->pszColumn,poPostGISRasterDS->pszColumn,poPostGISRasterDS->pszColumn,
+			poPostGISRasterDS->pszColumn, poPostGISRasterDS->pszSchema, poPostGISRasterDS->pszTable, 
+			poPostGISRasterDS->pszWhere, poPostGISRasterDS->pszColumn, adfProjWin[0], adfProjWin[1], 
+			adfProjWin[2], adfProjWin[3], adfProjWin[4], adfProjWin[5], adfProjWin[6], adfProjWin[7], 
+			adfProjWin[0], adfProjWin[1], poPostGISRasterDS->nSrid, poPostGISRasterDS->pszColumn, orderByY, 
+			poPostGISRasterDS->pszColumn, orderByX);
 	}
 
 	CPLDebug("PostGIS_Raster", "PostGISRasterRasterBand::IRasterIO(): Query = %s", osCommand.c_str());
@@ -532,6 +542,8 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 	}
 	
 	GDALSetDescription(vrtDataset, "postgis_raster.vrt");
+	GDALSetProjection(vrtDataset, GDALGetProjectionRef((GDALDatasetH)this->poDS));
+	GDALSetGeoTransform(vrtDataset, adfTransform);
 
 
 	/**
@@ -547,22 +559,37 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 	 * TODO: What if whe have a really BIG amount of data fetched from db? CURSORS
 	 *************************************************************************/
 	for(iTuplesIndex = 0; iTuplesIndex < nTuples; iTuplesIndex++) {
+	
+		/**
+		 * Fetch data from result
+		 **/
 		pbyData = CPLHexToBinary(PQgetvalue(poResult, iTuplesIndex, 0), &nWKBLength);
 		nTileWidth = atoi(PQgetvalue(poResult, iTuplesIndex, 1));
 		nTileHeight = atoi(PQgetvalue(poResult, iTuplesIndex, 2));
 		pszDataType = CPLStrdup(PQgetvalue(poResult, iTuplesIndex, 3));
 		dfTileBandNoDataValue = atof(PQgetvalue(poResult, iTuplesIndex, 4));
+		dfTileScaleX = atof(PQgetvalue(poResult, iTuplesIndex, 5));
+		dfTileScaleY = atof(PQgetvalue(poResult, iTuplesIndex, 6));
+		dfTileUpperLeftX = atof(PQgetvalue(poResult, iTuplesIndex, 7));
+		dfTileUpperLeftY = atof(PQgetvalue(poResult, iTuplesIndex, 8));
 			
+		/**
+		 * Calculate some useful parameters
+		 **/
 		eTileDataType = TranslateDataType(pszDataType);
 		nTileDataTypeSize = GDALGetDataTypeSize(eTileDataType) / 8;
 		
-		// Length of this band's data
 		nBandDataLength = nTileWidth * nTileHeight * nTileDataTypeSize;
 
-		// Get band pixels 
+		/**
+		 * Get the pointer to the band pixels
+		 **/ 
 		pbyBandData = GET_BAND_DATA(pbyData, 1, nTileDataTypeSize, nBandDataLength);
 		
-		// Create new MEM dataset based on in-memory array
+		/**
+		 * Create new MEM dataset, based on in-memory array, to hold the pixels.
+		 * The dataset will have only 1 band
+		 **/
 		memset(szTmp, 0, sizeof(szTmp));
 		CPLPrintPointer(szTmp, pbyBandData, sizeof(szTmp));
 
@@ -583,15 +610,51 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 		memDatasets[iTuplesIndex] = MEMDataset::Open(oOpenInfo);
 		GDALSetDescription(memDatasets[iTuplesIndex], szMemOpenInfo);
 
-		// Get MEM raster band, to add it as simple source
+		/** 
+		 * Get MEM raster band, to add it as simple source.
+		 **/
 		memRasterBand = (GDALRasterBandH)memDatasets[iTuplesIndex]->GetRasterBand(1); 
-			
 		((MEMRasterBand *)memRasterBand)->SetNoDataValue(dfTileBandNoDataValue);
 
+		CPLDebug("PostGIS_Raster", "PostGISRasterRasterBand::IRasterIO: Adding "
+			"VRT Simple Source");
 		
-		// Add the mem raster band as new simple source band
-		VRTAddSimpleSource(vrtRasterBand, memRasterBand, 0, 0, nTileWidth, nTileHeight,
-			0, 0, nTileWidth, nTileHeight, NULL, dfTileBandNoDataValue);
+		/**
+		 * Get source and destination windows for the simple source
+		 **/ 
+		if (dfTileUpperLeftX < poPostGISRasterDS->xmin) {
+			nSrcXOff = (int)((poPostGISRasterDS->xmin - dfTileUpperLeftX) / 
+				dfTileScaleX + 0.5);
+        	nDstXOff = 0;
+		}
+
+		else {
+			nSrcXOff = 0;
+			nDstXOff = (int)(0.5 + (dfTileUpperLeftX - poPostGISRasterDS->xmin) / 	
+				adfTransform[1]);
+    	}
+
+		if (poPostGISRasterDS->ymax < dfTileUpperLeftY) {
+        	nSrcYOff = (int)((dfTileUpperLeftY - poPostGISRasterDS->ymax) / 
+				fabs(dfTileScaleY) + 0.5);
+			nDstYOff = 0;
+    	}
+
+		else {
+			nSrcYOff = 0;
+			nDstYOff = (int)(0.5 + (poPostGISRasterDS->ymax - dfTileUpperLeftY) / 
+				fabs(adfTransform[5]));
+		}
+
+		nDstXSize = (int)(0.5 + nTileWidth * dfTileScaleX / adfTransform[1]);
+		nDstYSize = (int)(0.5 + nTileHeight * fabs(dfTileScaleY) / fabs(adfTransform[5]));
+     
+
+		/**
+		 * Add the mem raster band as new simple source band
+		 **/
+		VRTAddSimpleSource(vrtRasterBand, memRasterBand, nSrcXOff, nSrcYOff, nTileWidth, nTileHeight,
+			nDstXOff, nDstYOff, nDstXSize, nDstYSize, NULL, dfTileBandNoDataValue);
 
 		delete oOpenInfo;
 

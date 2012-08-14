@@ -124,6 +124,7 @@ private:
 	ResolutionStrategy resolutionStrategy;
     int nMode;
 	int nTiles;
+	double xmin, ymin, xmax, ymax;
     GBool bBlocksCached;// TODO: future use?
     GBool SetRasterProperties(const char *);
     GBool BrowseDatabase(const char *, char *);

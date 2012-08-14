@@ -369,7 +369,6 @@ GBool PostGISRasterDataset::SetRasterProperties
 	int nTileHeight = 0;
 	int nPreviousTileWidth = 0;
 	int nPreviousTileHeight = 0;
-	double xmin, xmax, ymin, ymax;
 	int nBlockXSize = 0, nBlockYSize = 0;
 
     /* Incorporated variables from old SetRasterBand method */
