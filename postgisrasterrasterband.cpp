@@ -675,7 +675,12 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 
 		delete oOpenInfo;
 
+		CPLFree(pbyData);
+		CPLFree(pszDataType);
+
 	}
+ 
+	PQclear(poResult);
 	
 	// Just for testing (writes VRT file, with name = dataset description, to disk)
 	VRTFlushCache(vrtDataset);
@@ -688,6 +693,10 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 
 	CPLDebug("PostGIS_Raster", "PostGISRasterRasterBand::IRasterIO(): Data read");
 
+	GDALClose(vrtDataset);
+	
+	CPLDebug("PostGIS_Raster", "PostGISRasterRasterBand::IRasterIO(): VRTDataset released");
+	
 	// Free resources
 	for(iTuplesIndex = 0; iTuplesIndex < nTuples; iTuplesIndex++) {
 		delete memDatasets[iTuplesIndex];
@@ -697,10 +706,6 @@ CPLErr PostGISRasterRasterBand::IRasterIO(GDALRWFlag eRWFlag, int nXOff, int nYO
 	
 	CPLDebug("PostGIS_Raster", "PostGISRasterRasterBand::IRasterIO(): MEMDatasets released");
 
-	GDALClose(vrtDataset);
-	
-	CPLDebug("PostGIS_Raster", "PostGISRasterRasterBand::IRasterIO(): VRTDataset released");
-	
 	return err;
 		
 }
